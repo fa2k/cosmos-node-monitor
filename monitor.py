@@ -16,6 +16,10 @@ def get_block_height(node_host, node_port):
     return json.loads(data)["result"]["sync_info"]["latest_block_height"]
 
 def send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email, subject, message):
+    """Attempt to send an email with the specified parameters.
+
+    The return value indicates whether the email was accepted by the SMTP server.
+    """
     try:
         msg = MIMEMultipart()
         msg['From'] = from_email
@@ -29,15 +33,18 @@ def send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, f
             server.login(smtp_username, smtp_password)
         server.send_message(msg)
         server.quit()
+        return True
     except Exception as e:
         print(f"Failed to send email. Error: {str(e)}")
+        return False
 
 def monitor_node(node_host, node_port, smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email, send_test_email, check_interval):
     if send_test_email:
-        send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
+        if not send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
                    "Test Email",
                    "This is a test email from the Cosmos node monitor script. "
-                   f"It is configured to monitor {node_host}:{node_port}.")
+                   f"It is configured to monitor {node_host}:{node_port}."):
+            raise RuntimeError("Unable to send test message - quitting!")
 
     last_height = None
     spam = False
@@ -46,20 +53,18 @@ def monitor_node(node_host, node_port, smtp_server, smtp_port, smtp_username, sm
             height = get_block_height(node_host, node_port)
             if last_height is not None and height <= last_height:
                 if not spam:
-                    send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
+                    spam = send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
                             "Node is not processing new blocks",
                             f"The node at {node_host} is not processing new blocks. "
                             f"Last block height: {last_height}, current block height: {height}")
-                spam = True
             else:
                 spam = False
             last_height = height
         except Exception as e:
             if not spam:
-                send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
+                spam = send_email(smtp_server, smtp_port, smtp_username, smtp_password, to_email, from_email,
                         "Node is down",
                         f"The node at http://{node_host}:{node_port} is down. Error: {str(e)}")
-            spam = True
         time.sleep(check_interval)  # Wait for a minute before checking again
 
 if __name__ == "__main__":
