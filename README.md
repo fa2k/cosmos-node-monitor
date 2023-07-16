@@ -7,9 +7,9 @@ Example command line to monitor a Cosmos node at IP address 192.168.1.19.
 
     python monitor.py \
         --node_host=192.168.1.19 \
-        --smtp_server=smtp.domeneshop.no \
-        --to_email=pmb@fa2k.net \
-        --smtp_username=pmb@fa2k.net \
+        --smtp_server=smtp.example.com \
+        --to_email=staff@example.com \
+        --smtp_username=monitoring \
         --smtp_password=niceTry
 
 
